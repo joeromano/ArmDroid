@@ -48,8 +48,7 @@ class ArmDroid:
                        0b00110000,  # shoulder
                        0b00100010]  # base
 
-        self._PULSE_TRANSMIT = 2000
-        self._DELAY_RESET = 1000
+        self._PULSE_TRANSMIT = 2200
 
     def drive_motor(self, motor_idx, steps, dir):
         if (motor_idx < 0 or motor_idx > 5):
@@ -63,15 +62,15 @@ class ArmDroid:
 
         for i in range(steps):
             for j in range(len(self._commutate_pattern_pos)):
-                wiringpi.delayMicroseconds(self._DELAY_RESET)
+                #wiringpi.delayMicroseconds(self._DELAY_RESET)
                 output = motor
                 if(dir):
                     output = output | self._commutate_pattern_pos[j]
                 else:
                     output = output | self._commutate_pattern_neg[j]
                 wiringpi.digitalWriteByte(output | self._enable)
-                wiringpi.delayMicroseconds(self._PULSE_TRANSMIT)
                 wiringpi.digitalWriteByte(output)
+                wiringpi.delayMicroseconds(self._PULSE_TRANSMIT)
 
 
 def main():

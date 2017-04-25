@@ -4,8 +4,9 @@
 
 
 def _Getch():
-    """Gets a single character from standard input.  Does not echo to the
-screen."""
+    """Gets a single character from standard input.
+       Does not echo to the screen
+    """
     import sys
     import tty
     import termios

@@ -48,7 +48,7 @@ class ArmDroid:
                        0b00110000,  # shoulder
                        0b00100010]  # base
 
-        self._PULSE_TRANSMIT = 1000
+        self._PULSE_TRANSMIT = 2000
         self._DELAY_RESET = 1000
 
     def drive_motor(self, motor_idx, steps, dir):

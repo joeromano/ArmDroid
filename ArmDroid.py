@@ -10,7 +10,7 @@
 """ Usage Description"""
 """ Testing: sudo python ArmDroid.py """
 
-
+import time
 import wiringpi
 
 
@@ -29,13 +29,10 @@ class ArmDroid:
             wiringpi.pinMode(i, wiringpi.OUTPUT)
 
         # define the phase commutation pattern
-        self._commutate_pattern_pos = [0b10000000,  # A
-                                       0b00001000,  # B
-                                       0b01000000,  # C
-                                       0b00000100]  # D
-        # create the reversed pattern for negative commutation
-        self._commutate_pattern_neg = list(
-            reversed(self._commutate_pattern_pos))
+        self._commutate_pattern = [0b10000000,  # A
+                                   0b00001000,  # B
+                                   0b01000000,  # C
+                                   0b00000100]  # D
 
         # the enable bit flag to signal a read
         self._enable = 0b00000001
@@ -48,37 +45,128 @@ class ArmDroid:
                        0b00110000,  # shoulder
                        0b00100010]  # base
 
-        self._PULSE_TRANSMIT = 2200
+        self._commutate_index = [0] * len(self._joint)
+
+        self._PULSE_TRANSMIT = 3000
+
+        # list to track the position count steps
+        self._position_cnt = [0.0] * len(self._joint)
+
+        # last time we drove this joint
+        self._last_pulse = time.time()
+
+    def _update_commutate_pattern(self, motor_idx, dir):
+        """
+         Update the commutation pattern pointer up or down and return
+         the pattern
+         """
+        if(dir):
+            self._commutate_index[motor_idx] += 1
+            if self._commutate_index[motor_idx] > 3:
+                self._commutate_index[motor_idx] = 0
+        else:
+            self._commutate_index[motor_idx] -= 1
+            if self._commutate_index[motor_idx] < 0:
+                self._commutate_index[motor_idx] = 3
+        return self._commutate_pattern[self._commutate_index[motor_idx]]
+
+    def _pulse_motor(self, motor_idx, dir):
+        """
+        Pulse a motor a single step
+        """
+        output = self._joint[motor_idx]
+        output = output | self._update_commutate_pattern(motor_idx, dir)
+        if(dir):
+            self._position_cnt[motor_idx] += 1
+        else:
+            self._position_cnt[motor_idx] -= 1
+        wiringpi.digitalWriteByte(output | self._enable)
+        wiringpi.digitalWriteByte(output)
 
     def drive_motor(self, motor_idx, steps, dir):
+        """
+        Function to drive a single motor axis a specified number of steps
+
+        param: motor_idx - the index number of the motor to drive [0-5]
+        type: integer
+
+        param: steps - the number of steps to move
+        type: positive integer
+
+        param: dir - the direction (clockwise = 1, ccw = 0)
+        type: bool
+        """
         if (motor_idx < 0 or motor_idx > 5):
+            print("Bad motor index value (%d) detected." % motor_idx)
             return
         if steps <= 0:
+            print("Cannot move negative steps.")
             return
         if (dir < 0 or dir > 1):
+            print("dir must be either 0 or 1")
             return
 
-        motor = self._joint[motor_idx]
-
         for i in range(steps):
-            for j in range(len(self._commutate_pattern_pos)):
-                #wiringpi.delayMicroseconds(self._DELAY_RESET)
-                output = motor
-                if(dir):
-                    output = output | self._commutate_pattern_pos[j]
-                else:
-                    output = output | self._commutate_pattern_neg[j]
-                wiringpi.digitalWriteByte(output | self._enable)
-                wiringpi.digitalWriteByte(output)
-                wiringpi.delayMicroseconds(self._PULSE_TRANSMIT)
+            delay_us = (self._PULSE_TRANSMIT -
+                        (time.time() - self._last_pulse))
+            if delay_us > 0:
+                wiringpi.delayMicroseconds(int(round(delay_us)))
+
+            self._pulse_motor(motor_idx, dir)
+            self._last_pulse = time.time()
+
+    def drive_multi(self, motor_idx, steps):
+        """
+        Function to drive multiple axes at once
+        param: motor_idx -  a list of motor indices to drive
+        type: list of integers
+
+        param: steps - the number of steps to move each corresponding index
+        type: list of integers (positive or negative). NOTE: must be same size
+              as motor_idx list
+        """
+        if len(motor_idx) != len(steps):
+            print("motor_idx and steps lists must be same size!")
+            return
+        for idx in motor_idx:
+            if idx < 0 or idx > 5:
+                print "motor_idx must be 0 to 5"
+                return
+
+        # parse off the direction
+        dir = []
+        for idx in range(len(steps)):
+            if steps[idx] > 0:
+                dir.append(1)
+            else:
+                dir.append(0)
+                steps[idx] = steps[idx] * -1
+
+        # loop the maximum number of steps of all motors
+        for i in range(max(steps)):
+            delay_us = (self._PULSE_TRANSMIT -
+                        (time.time() - self._last_pulse))
+            if delay_us > 0:
+                wiringpi.delayMicroseconds(int(round(delay_us)))
+
+            for idx in range(len(steps)):
+                if steps[idx] > 0:
+                    self._pulse_motor(motor_idx[idx], dir[idx])
+                    steps[idx] -= 1
+                    self._last_pulse = time.time()
 
 
 def main():
     a = ArmDroid()
-    steps = 100
+
+    steps = 400
     for motor_idx in range(6):
         a.drive_motor(motor_idx, steps, 0)
         a.drive_motor(motor_idx, steps, 1)
+
+    a.drive_multi([5, 4, 3, 2, 1, 0],[400]*6)
+    a.drive_multi([5, 4, 3, 2, 1, 0],[-400]*6)
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-#!/usr/bkeyin/env python
+#!/usr/bin/env python
 """ keyboard_demo.py - A simple armdroid jog demo uskeying the keyboard
 """
 
@@ -32,29 +32,31 @@ print("Wrist Pitch: O/P")
 print("Wrist Roll: K/L")
 print("Gripper: N/M")
 keyin = _Getch()
+
+steps = 5
 while(keyin != 'v'):
     keyin = _Getch()
     if keyin == 'q':
-        a.drive_motor(5, 1, 0)
+        a.drive_motor(5, steps, 0)
     if keyin == 'w':
-        a.drive_motor(5, 1, 1)
+        a.drive_motor(5, steps, 1)
     if keyin == 'a':
-        a.drive_motor(4, 1, 0)
+        a.drive_motor(4, steps, 0)
     if keyin == 's':
-        a.drive_motor(4, 1, 1)
+        a.drive_motor(4, steps, 1)
     if keyin == 'z':
-        a.drive_motor(3, 1, 0)
+        a.drive_motor(3, steps, 0)
     if keyin == 'x':
-        a.drive_motor(3, 1, 1)
+        a.drive_motor(3, steps, 1)
     if keyin == 'o':
-        a.drive_motor(2, 1, 0)
+        a.drive_motor(2, steps, 0)
     if keyin == 'p':
-        a.drive_motor(2, 1, 1)
+        a.drive_motor(2, steps, 1)
     if keyin == 'k':
-        a.drive_motor(1, 1, 0)
+        a.drive_motor(1, steps, 0)
     if keyin == 'l':
-        a.drive_motor(1, 1, 1)
+        a.drive_motor(1, steps, 1)
     if keyin == 'n':
-        a.drive_motor(0, 1, 0)
+        a.drive_motor(0, steps, 0)
     if keyin == 'm':
-        a.drive_motor(0, 1, 1)
+        a.drive_motor(0, steps, 1)

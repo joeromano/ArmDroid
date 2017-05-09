@@ -49,6 +49,9 @@ class ArmDroid:
 
         self._PULSE_TRANSMIT = 3000
 
+        # flag to indicate whether to allow motor commutation
+        self._motors_off = False
+
         # list to track the position count steps
         self._position_cnt = [0.0] * len(self._joint)
 
@@ -74,6 +77,10 @@ class ArmDroid:
         """
         Pulse a motor a single step
         """
+        if self._motors_off:
+            print "ERROR: Cannot drive motor while motors are off!"
+            return
+
         output = self._joint[motor_idx]
         output = output | self._update_commutate_pattern(motor_idx, dir)
         if(dir):
@@ -82,6 +89,21 @@ class ArmDroid:
             self._position_cnt[motor_idx] -= 1
         wiringpi.digitalWriteByte(output | self._enable)
         wiringpi.digitalWriteByte(output)
+
+    def motors_off(self):
+        # for each joint output an empty commutate pattern
+        for output in self._joint:
+            wiringpi.digitalWriteByte(output | self._enable)
+            wiringpi.digitalWriteByte(output)
+        self._motors_off = True
+
+    def motors_on(self):
+        # for each joint output it's last commutate pattern
+        for idx, output in enumerate(self._joint):
+            output = output | self._commutate_index[idx]
+            wiringpi.digitalWriteByte(output | self._enable)
+            wiringpi.digitalWriteByte(output)
+        self._motors_off = False
 
     def drive_motor(self, motor_idx, steps, dir):
         """
@@ -157,15 +179,24 @@ class ArmDroid:
 
 
 def main():
+    # create our interface
     a = ArmDroid()
 
+    # test some single-joint moves
     steps = 400
     for motor_idx in range(6):
         a.drive_motor(motor_idx, steps, 0)
         a.drive_motor(motor_idx, steps, 1)
 
+    # test motors off/on and multi-joint moves
+    a.motors_off()
     a.drive_multi([5, 4, 3, 2, 1, 0],[400]*6)
     a.drive_multi([5, 4, 3, 2, 1, 0],[-400]*6)
+    a.motors_on()
+
+    # test the error case
+    a.motors_off()
+    a.drive_multi([5, 4, 3, 2, 1, 0], [400]*6)
 
 
 if __name__ == "__main__":
